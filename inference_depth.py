@@ -16,6 +16,7 @@ from path import Path
 from imageio import imread, imwrite
 from dataloaders.utils import load_as_float_img
 import dataloaders.custom_transforms as cs_tf
+from scipy.ndimage import zoom
 
 def parse_args():
     parser = ArgumentParser()
@@ -45,7 +46,7 @@ def main():
     cfg.dataset[dataset_name].test.modality = args.modality
 
     input_dir = Path(args.input_dir)
-    image_files = sum([(input_dir+'/left/').files('*_{}.{}'.format(args.modality,ext))
+    image_files = sum([(input_dir+'/left/'+args.modality).files()
                       for ext in ['jpg', 'png']], [])
     image_files = sorted(image_files)
     print('{} samples found for evaluation'.format(len(image_files)))
@@ -73,7 +74,8 @@ def main():
     )
 
     if args.save_dir != ' ':
-        save_dir_all   = osp.join(args.save_dir, 'all')
+        # save_dir_all   = osp.join(args.save_dir, 'all')
+        save_dir_all   = args.save_dir
         os.makedirs(save_dir_all, exist_ok=True)
         
     # model inference
@@ -89,7 +91,11 @@ def main():
         # save prediction
         if  args.save_dir != ' ':
             img_vis = visualize_image(tgt_left_in, flag_np=True).transpose(1,2,0)
-            pred_depth_vis = visualize_depth_as_numpy(pred_depth.squeeze(), 'jet')
+            pred_depth_vis = visualize_depth_as_numpy(pred_depth.squeeze(), 'magma')
+
+            if save_dir_all.split('/')[-2] == "adabins":
+              img = zoom(pred_depth_vis, (2,2,1))
+              pred_depth_vis = img
 
             png_path = osp.join(save_dir_all, "{}.png".format(filename))
             stack = cv2.cvtColor(np.concatenate((img_vis, pred_depth_vis), axis=0), cv2.COLOR_RGB2BGR)
